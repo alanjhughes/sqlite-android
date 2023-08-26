@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'requery-sqlite'
+rootProject.name = 'expo-sqlite-android'
 
-include ':sqlite-android'
+include ':expo-sqlite-android'
