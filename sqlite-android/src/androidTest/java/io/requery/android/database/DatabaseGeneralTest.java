@@ -48,6 +48,7 @@ import androidx.test.filters.SmallTest;
 import androidx.test.filters.Suppress;
 import io.requery.android.database.sqlite.SQLiteDatabase;
 import io.requery.android.database.sqlite.SQLiteStatement;
+import io.requery.android.database.sqlite.SQLiteUpdateListener;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -55,6 +56,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 @SuppressWarnings({"deprecated", "ResultOfMethodCallIgnored"})
 @RunWith(AndroidJUnit4.class)
@@ -66,7 +70,7 @@ public class DatabaseGeneralTest {
     private static final String sString3 = "this string is a little longer, but still a test";
     private static final String PHONE_NUMBER = "16175551212";
 
-    private static final int CURRENT_DATABASE_VERSION = 42;
+    private static final int CURRENT_DATABASE_VERSION = 39;
     private SQLiteDatabase mDatabase;
     private File mDatabaseFile;
 

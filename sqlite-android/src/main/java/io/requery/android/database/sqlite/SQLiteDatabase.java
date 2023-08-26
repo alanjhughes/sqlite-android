@@ -28,7 +28,6 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabaseCorruptException;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteTransactionListener;
-import android.os.Build;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.text.TextUtils;
@@ -39,7 +38,6 @@ import android.util.Printer;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.core.os.CancellationSignal;
 import androidx.core.os.OperationCanceledException;
 import androidx.sqlite.db.SupportSQLiteDatabase;
@@ -913,6 +911,22 @@ public final class SQLiteDatabase extends SQLiteClosable implements SupportSQLit
         addFunction(name, numArgs, function, 0);
     }
 
+    public void addUpdateListener(UpdateListener function) {
+        SQLiteUpdateListener wrapper = new SQLiteUpdateListener(function);
+
+        synchronized (mLock) {
+            throwIfNotOpenLocked();
+
+            mConfigurationLocked.updateListener = wrapper;
+            try {
+                mConnectionPoolLocked.reconfigure(mConfigurationLocked);
+            } catch (RuntimeException ex) {
+                mConfigurationLocked.updateListener = null;
+                throw ex;
+            }
+        }
+    }
+
     /**
      * Registers a Function callback as a function that can be called from
      * SQLite database triggers.
@@ -1352,16 +1366,10 @@ public final class SQLiteDatabase extends SQLiteClosable implements SupportSQLit
      * {@link Cursor}s are not synchronized, see the documentation for more details.
      */
     @Override
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public Cursor query(SupportSQLiteQuery supportQuery, android.os.CancellationSignal signal) {
         if (signal != null) {
             final CancellationSignal supportCancellationSignal = new CancellationSignal();
-            signal.setOnCancelListener(new android.os.CancellationSignal.OnCancelListener() {
-                @Override
-                public void onCancel() {
-                    supportCancellationSignal.cancel();
-                }
-            });
+            signal.setOnCancelListener(supportCancellationSignal::cancel);
             return query(supportQuery, supportCancellationSignal);
         } else {
             return query(supportQuery, (CancellationSignal) null);
@@ -2482,6 +2490,10 @@ public final class SQLiteDatabase extends SQLiteClosable implements SupportSQLit
          * @return String value of the result or null
          */
         void callback(Args args, Result result);
+    }
+
+    public interface UpdateListener {
+        void callback(String tableName, int operationType, int rowID);
     }
 
     static boolean hasCodec() {

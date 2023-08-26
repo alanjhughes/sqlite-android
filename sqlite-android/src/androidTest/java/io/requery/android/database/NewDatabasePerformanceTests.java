@@ -41,7 +41,7 @@ public class NewDatabasePerformanceTests {
     final static int kMultiplier = 1;
 
     public static class PerformanceBase extends TestCase {
-        protected static final int CURRENT_DATABASE_VERSION = 42;
+        protected static final int CURRENT_DATABASE_VERSION = 39;
         protected SQLiteDatabase mDatabase;
         protected File mDatabaseFile;
 

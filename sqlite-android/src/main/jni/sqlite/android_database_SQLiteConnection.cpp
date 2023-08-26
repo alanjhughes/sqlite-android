@@ -65,6 +65,10 @@ static struct {
 } gSQLiteFunctionClassInfo;
 
 static struct {
+    jmethodID dispatchUpdate;
+} gSQLiteUpdateClassInfo;
+
+static struct {
     jclass clazz;
 } gStringClassInfo;
 
@@ -568,8 +572,8 @@ static void nativeExecute(JNIEnv* env, jclass clazz, jlong connectionPtr,
 
 static jint nativeExecuteForChangedRowCount(JNIEnv* env, jclass clazz,
         jlong connectionPtr, jlong statementPtr) {
-    SQLiteConnection* connection = reinterpret_cast<SQLiteConnection*>(connectionPtr);
-    sqlite3_stmt* statement = reinterpret_cast<sqlite3_stmt*>(statementPtr);
+    auto* connection = reinterpret_cast<SQLiteConnection*>(connectionPtr);
+    auto* statement = reinterpret_cast<sqlite3_stmt*>(statementPtr);
 
     int err = executeNonQuery(env, connection, statement);
     return err == SQLITE_DONE ? sqlite3_changes(connection->db) : -1;
@@ -927,68 +931,94 @@ static void nativeLoadExtension(JNIEnv* env, jobject clazz,
     }
 }
 
+jobject updateCallbackObject;
+
+void updateCallback(void *data, int operationType, const char *,
+                    const char *tableName, sqlite3_int64 rowID) {
+    auto *env = static_cast<JNIEnv *>(data);
+    jstring jTableName = env->NewStringUTF(tableName);
+    env->CallVoidMethod(
+            updateCallbackObject,
+            gSQLiteUpdateClassInfo.dispatchUpdate,
+            jTableName,
+            jint(operationType),
+            static_cast<jint>(rowID)
+    );
+    env->DeleteLocalRef(jTableName);
+}
+
+static void nativeAddUpdateHook(JNIEnv *env, jobject,
+                                jlong connectionPtr, jobject functionObj) {
+    auto *connection = reinterpret_cast<SQLiteConnection *>(connectionPtr);
+    updateCallbackObject = env->NewGlobalRef(functionObj);
+    sqlite3_update_hook(connection->db, updateCallback, env);
+}
+
+
 static JNINativeMethod sMethods[] =
-{
-    /* name, signature, funcPtr */
-    { "nativeOpen", "(Ljava/lang/String;ILjava/lang/String;ZZ)J",
-            (void*)nativeOpen },
-    { "nativeClose", "(J)V",
-            (void*)nativeClose },
-    { "nativeRegisterCustomFunction", "(JLio/requery/android/database/sqlite/SQLiteCustomFunction;)V",
-            (void*)nativeRegisterCustomFunction },
-    { "nativeRegisterFunction", "(JLio/requery/android/database/sqlite/SQLiteFunction;)V",
-            (void*)nativeRegisterFunction },
-    { "nativeRegisterLocalizedCollators", "(JLjava/lang/String;)V",
-            (void*)nativeRegisterLocalizedCollators },
-    { "nativePrepareStatement", "(JLjava/lang/String;)J",
-            (void*)nativePrepareStatement },
-    { "nativeFinalizeStatement", "(JJ)V",
-            (void*)nativeFinalizeStatement },
-    { "nativeGetParameterCount", "(JJ)I",
-            (void*)nativeGetParameterCount },
-    { "nativeIsReadOnly", "(JJ)Z",
-            (void*)nativeIsReadOnly },
-    { "nativeGetColumnCount", "(JJ)I",
-            (void*)nativeGetColumnCount },
-    { "nativeGetColumnName", "(JJI)Ljava/lang/String;",
-            (void*)nativeGetColumnName },
-    { "nativeBindNull", "(JJI)V",
-            (void*)nativeBindNull },
-    { "nativeBindLong", "(JJIJ)V",
-            (void*)nativeBindLong },
-    { "nativeBindDouble", "(JJID)V",
-            (void*)nativeBindDouble },
-    { "nativeBindString", "(JJILjava/lang/String;)V",
-            (void*)nativeBindString },
-    { "nativeBindBlob", "(JJI[B)V",
-            (void*)nativeBindBlob },
-    { "nativeResetStatementAndClearBindings", "(JJ)V",
-            (void*)nativeResetStatementAndClearBindings },
-    { "nativeExecute", "(JJ)V",
-            (void*)nativeExecute },
-    { "nativeExecuteForLong", "(JJ)J",
-            (void*)nativeExecuteForLong },
-    { "nativeExecuteForString", "(JJ)Ljava/lang/String;",
-            (void*)nativeExecuteForString },
-    { "nativeExecuteForBlobFileDescriptor", "(JJ)I",
-            (void*)nativeExecuteForBlobFileDescriptor },
-    { "nativeExecuteForChangedRowCount", "(JJ)I",
-            (void*)nativeExecuteForChangedRowCount },
-    { "nativeExecuteForLastInsertedRowId", "(JJ)J",
-            (void*)nativeExecuteForLastInsertedRowId },
-    { "nativeExecuteForCursorWindow", "(JJJIIZ)J",
-            (void*)nativeExecuteForCursorWindow },
-    { "nativeGetDbLookaside", "(J)I",
-            (void*)nativeGetDbLookaside },
-    { "nativeCancel", "(J)V",
-            (void*)nativeCancel },
-    { "nativeResetCancel", "(JZ)V",
-            (void*)nativeResetCancel },
-    { "nativeHasCodec", "()Z",
-            (void*)nativeHasCodec },
-    { "nativeLoadExtension", "(JLjava/lang/String;Ljava/lang/String;)V",
-            (void*)nativeLoadExtension },
-};
+        {
+                /* name, signature, funcPtr */
+                {"nativeOpen",                           "(Ljava/lang/String;ILjava/lang/String;ZZ)J",
+                        (void *) nativeOpen},
+                {"nativeClose",                          "(J)V",
+                        (void *) nativeClose},
+                {"nativeRegisterCustomFunction",         "(JLio/requery/android/database/sqlite/SQLiteCustomFunction;)V",
+                        (void *) nativeRegisterCustomFunction},
+                {"nativeRegisterFunction",               "(JLio/requery/android/database/sqlite/SQLiteFunction;)V",
+                        (void *) nativeRegisterFunction},
+                {"nativeRegisterLocalizedCollators",     "(JLjava/lang/String;)V",
+                        (void *) nativeRegisterLocalizedCollators},
+                {"nativePrepareStatement",               "(JLjava/lang/String;)J",
+                        (void *) nativePrepareStatement},
+                {"nativeFinalizeStatement",              "(JJ)V",
+                        (void *) nativeFinalizeStatement},
+                {"nativeGetParameterCount",              "(JJ)I",
+                        (void *) nativeGetParameterCount},
+                {"nativeIsReadOnly",                     "(JJ)Z",
+                        (void *) nativeIsReadOnly},
+                {"nativeGetColumnCount",                 "(JJ)I",
+                        (void *) nativeGetColumnCount},
+                {"nativeGetColumnName",                  "(JJI)Ljava/lang/String;",
+                        (void *) nativeGetColumnName},
+                {"nativeBindNull",                       "(JJI)V",
+                        (void *) nativeBindNull},
+                {"nativeBindLong",                       "(JJIJ)V",
+                        (void *) nativeBindLong},
+                {"nativeBindDouble",                     "(JJID)V",
+                        (void *) nativeBindDouble},
+                {"nativeBindString",                     "(JJILjava/lang/String;)V",
+                        (void *) nativeBindString},
+                {"nativeBindBlob",                       "(JJI[B)V",
+                        (void *) nativeBindBlob},
+                {"nativeResetStatementAndClearBindings", "(JJ)V",
+                        (void *) nativeResetStatementAndClearBindings},
+                {"nativeExecute",                        "(JJ)V",
+                        (void *) nativeExecute},
+                {"nativeExecuteForLong",                 "(JJ)J",
+                        (void *) nativeExecuteForLong},
+                {"nativeExecuteForString",               "(JJ)Ljava/lang/String;",
+                        (void *) nativeExecuteForString},
+                {"nativeExecuteForBlobFileDescriptor",   "(JJ)I",
+                        (void *) nativeExecuteForBlobFileDescriptor},
+                {"nativeExecuteForChangedRowCount",      "(JJ)I",
+                        (void *) nativeExecuteForChangedRowCount},
+                {"nativeExecuteForLastInsertedRowId",    "(JJ)J",
+                        (void *) nativeExecuteForLastInsertedRowId},
+                {"nativeExecuteForCursorWindow",         "(JJJIIZ)J",
+                        (void *) nativeExecuteForCursorWindow},
+                {"nativeGetDbLookaside",                 "(J)I",
+                        (void *) nativeGetDbLookaside},
+                {"nativeCancel",                         "(J)V",
+                        (void *) nativeCancel},
+                {"nativeResetCancel",                    "(JZ)V",
+                        (void *) nativeResetCancel},
+                {"nativeHasCodec",                       "()Z",
+                        (void *) nativeHasCodec},
+                {"nativeLoadExtension",                  "(JLjava/lang/String;Ljava/lang/String;)V",
+                        (void *) nativeLoadExtension},
+                {"nativeAddUpdateHook",                  "(JLio/requery/android/database/sqlite/SQLiteUpdateListener;)V",
+                        (void *) nativeAddUpdateHook}
+        };
 
 int register_android_database_SQLiteConnection(JNIEnv *env)
 {
@@ -1012,6 +1042,11 @@ int register_android_database_SQLiteConnection(JNIEnv *env)
             "flags", "I");
     GET_METHOD_ID(gSQLiteFunctionClassInfo.dispatchCallback,
             clazz, "dispatchCallback", "(JJI)V");
+
+    FIND_CLASS(clazz, "io/requery/android/database/sqlite/SQLiteUpdateListener");
+
+    GET_METHOD_ID(gSQLiteUpdateClassInfo.dispatchUpdate,
+                  clazz, "dispatchUpdate", "(Ljava/lang/String;II)V");
 
     FIND_CLASS(clazz, "java/lang/String");
     gStringClassInfo.clazz = jclass(env->NewGlobalRef(clazz));

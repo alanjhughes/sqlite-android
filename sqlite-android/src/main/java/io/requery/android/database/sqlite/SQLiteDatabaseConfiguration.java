@@ -103,6 +103,8 @@ public final class SQLiteDatabaseConfiguration {
      */
     public final List<SQLiteCustomExtension> customExtensions = new ArrayList<>();
 
+    public SQLiteUpdateListener updateListener = null;
+
     /**
      * Creates a database configuration with the required parameters for opening a
      * database and default values for all other parameters.
@@ -184,6 +186,7 @@ public final class SQLiteDatabaseConfiguration {
         customExtensions.addAll(other.customExtensions);
         functions.clear();
         functions.addAll(other.functions);
+        updateListener = other.updateListener;
     }
 
     /**
