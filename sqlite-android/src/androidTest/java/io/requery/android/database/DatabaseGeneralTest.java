@@ -56,9 +56,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 @SuppressWarnings({"deprecated", "ResultOfMethodCallIgnored"})
 @RunWith(AndroidJUnit4.class)
