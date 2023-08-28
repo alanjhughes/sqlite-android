@@ -936,15 +936,18 @@ jobject updateCallbackObject;
 void updateCallback(void *data, int operationType, const char *,
                     const char *tableName, sqlite3_int64 rowID) {
     auto *env = static_cast<JNIEnv *>(data);
+    jobject functionObj = env->NewLocalRef(updateCallbackObject);
     jstring jTableName = env->NewStringUTF(tableName);
+
     env->CallVoidMethod(
-            updateCallbackObject,
+            functionObj,
             gSQLiteUpdateClassInfo.dispatchUpdate,
             jTableName,
             jint(operationType),
             static_cast<jint>(rowID)
     );
     env->DeleteLocalRef(jTableName);
+    env->DeleteLocalRef(functionObj);
 }
 
 static void nativeAddUpdateHook(JNIEnv *env, jobject,

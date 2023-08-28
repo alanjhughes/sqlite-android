@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -55,6 +56,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 @SuppressWarnings({"deprecated", "ResultOfMethodCallIgnored"})
 @RunWith(AndroidJUnit4.class)
@@ -160,6 +164,21 @@ public class DatabaseGeneralTest {
         // always empty regardless of if sqlite3_result_null is called or not
         cursor.moveToFirst();
         assertSame(null, cursor.getString(0));
+    }
+
+    @MediumTest
+    @Test
+    public void testUpdateListener() {
+        AtomicInteger executions = new AtomicInteger();
+        mDatabase.addUpdateListener((tableName, operationType, rowID) -> {
+            executions.getAndIncrement();
+        });
+
+        mDatabase.execSQL("CREATE TABLE phones (num TEXT);");
+        mDatabase.execSQL("INSERT INTO phones (num) VALUES ('911');");
+        mDatabase.execSQL("INSERT INTO phones (num) VALUES ('5555');");
+        mDatabase.execSQL("INSERT INTO phones (num) VALUES ('+" + PHONE_NUMBER + "');");
+        assertEquals(executions.get(), 3);
     }
 
     @MediumTest
