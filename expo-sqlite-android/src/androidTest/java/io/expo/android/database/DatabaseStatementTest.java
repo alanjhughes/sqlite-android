@@ -48,7 +48,7 @@ public class DatabaseStatementTest {
     private static final String sString2 = "and yet another test";
     private static final String sString3 = "this string is a little longer, but still a test";
     
-    private static final int CURRENT_DATABASE_VERSION = 39;
+    private static final int CURRENT_DATABASE_VERSION = 42;
     private SQLiteDatabase mDatabase;
     private File mDatabaseFile;
 
